@@ -1,0 +1,39 @@
+name: Fetch CBR rates
+
+on:
+  schedule:
+    # ВНИМАНИЕ: время в cron указывается в UTC (МСК = UTC+3).
+    # Сейчас — каждые 10 минут (для примера).
+    # Для запуска раз в день замените строку ниже, например, на:
+    #   - cron: "0 14 * * *"   # 17:00 МСК, курс на завтра уже опубликован
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # кнопка ручного запуска во вкладке Actions
+
+permissions:
+  contents: write # разрешаем workflow коммитить в репозиторий
+
+concurrency:
+  group: fetch-rates
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch rates
+        run: python3 fetch_rates.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/rates.csv
+          if git diff --cached --quiet; then
+            echo "Курс не изменился — коммитить нечего."
+            exit 0
+          fi
+          git commit -m "rates: $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push
