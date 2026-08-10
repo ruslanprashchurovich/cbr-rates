@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Берём актуальную вершину main на момент выполнения, а не SHA,
+          # зафиксированный при создании запуска (важно для re-run старых запусков).
+          ref: main
 
       - name: Fetch rates
         run: python3 fetch_rates.py
@@ -37,4 +41,5 @@ jobs:
             exit 0
           fi
           git commit -m "rates: $(date -u +'%Y-%m-%d %H:%M') UTC"
-          git push
+          # Если main успел уехать вперёд, подтягиваем изменения и пробуем ещё раз
+          git push || (git pull --rebase origin main && git push)
